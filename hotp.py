@@ -11,7 +11,7 @@ import urllib.parse
 
 __all__ = ['HOTP', 'TOTP', 'from_qr', 'default_alg']
 
-default_alg = hashlib.sha1
+default_alg = 'sha1'
 
 
 class HOTP:
@@ -45,6 +45,26 @@ class HOTP:
         result = struct.unpack('>L', result)[0] & 0x7FFFFFFF
         result %= 10 ** self.digits
         return f'{result:0{self.digits}}'
+
+    def to_qr(self) -> str:
+        netloc = self.__class__.__name__.lower()
+        params = {'secret': base64.b32encode(self.secret).rstrip(b'=')}
+        if self.issuer:
+            path = f'{self.issuer}:{self.user_account}'
+            params['issuer'] = self.issuer
+        else:
+            path = self.user_account
+        path = urllib.parse.quote(path)
+        if self.alg.name != default_alg:
+            params['algorithm'] = self.alg.name.upper()
+        if self.digits != 6:
+            params['digits'] = self.digits
+        if self.__class__ is HOTP:
+            params['counter'] = self.counter
+        if self.__class__ is TOTP and self.period != 30:
+            params['period'] = self.period
+        query = urllib.parse.urlencode(params)
+        return urllib.parse.urlunparse(('otpauth', netloc, path, None, query, None))
 
 
 class TOTP(HOTP):

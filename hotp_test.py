@@ -108,5 +108,20 @@ class TestFromQR(unittest.TestCase):
         self.assertEqual(None, t.user_account)
 
 
+class TestToQR(unittest.TestCase):
+
+    def test_hotp_from_qr(self):
+        url = ('otpauth://hotp/ACME%20Co%3Ajohn.doe%40email.com?'
+               'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
+               'algorithm=SHA256&counter=1')
+        self.assertEqual(url, from_qr(url).to_qr())
+
+    def test_totp_from_qr(self):
+        url = ('otpauth://totp/ACME%20Co%3Ajohn.doe%40email.com?'
+               'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
+               'algorithm=SHA512&period=60')
+        self.assertEqual(url, from_qr(url).to_qr())
+
+
 if __name__ == '__main__':
     unittest.main()
