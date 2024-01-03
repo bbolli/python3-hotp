@@ -92,7 +92,7 @@ def from_qr(qr: str) -> HOTP:
     if len(path) == 2:
         hotp.issuer = path[0]
         hotp.user_account = path[1].strip()
-    elif len(path) == 1:
+    elif len(path) == 1 and path[0]:
         hotp.user_account = path[0].strip()
     else:
         hotp.issuer = query.get('issuer')

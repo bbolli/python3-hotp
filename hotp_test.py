@@ -102,9 +102,10 @@ class TestFromQR(unittest.TestCase):
         self.assertEqual('john.doe@email.com', h.user_account)
 
     def test_totp_from_qr(self):
-        t = from_qr('otpauth://totp/ACME%20Co:john.doe@email.com?'
-                    'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&algorithm=sha1')
+        t = from_qr('otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%26Co')
         self.assertEqual('TOTP(digits=6, alg=sha1, period=30)', repr(t))
+        self.assertEqual('ACME&Co', t.issuer)
+        self.assertEqual(None, t.user_account)
 
 
 if __name__ == '__main__':
