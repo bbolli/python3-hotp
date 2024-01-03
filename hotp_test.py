@@ -46,6 +46,41 @@ class TestTOTP(unittest.TestCase):
         self.assertNotEqual(base, t.count(ts))
         self.assertEqual(base, t.count(ts * 2))
 
+    @staticmethod
+    def secret(size: int):
+        mult = size // 10 + bool(size % 10)
+        return (b'1234567890' * mult)[:size]
+
+    def test_token_sha1(self):
+        """Secret and test values from appendix B of RFC 6238."""
+        t = TOTP(self.secret(20), digits=8)
+        self.assertEqual('94287082', t.token(t.count(59)))
+        self.assertEqual('07081804', t.token(t.count(1111111109)))
+        self.assertEqual('14050471', t.token(t.count(1111111111)))
+        self.assertEqual('89005924', t.token(t.count(1234567890)))
+        self.assertEqual('69279037', t.token(t.count(2000000000)))
+        self.assertEqual('65353130', t.token(t.count(20000000000)))
+
+    def test_token_sha256(self):
+        """Secret and test values from appendix B of RFC 6238."""
+        t = TOTP(self.secret(32), digits=8, alg='sha256')
+        self.assertEqual('46119246', t.token(t.count(59)))
+        self.assertEqual('68084774', t.token(t.count(1111111109)))
+        self.assertEqual('67062674', t.token(t.count(1111111111)))
+        self.assertEqual('91819424', t.token(t.count(1234567890)))
+        self.assertEqual('90698825', t.token(t.count(2000000000)))
+        self.assertEqual('77737706', t.token(t.count(20000000000)))
+
+    def test_token_sha512(self):
+        """Secret and test values from appendix B of RFC 6238."""
+        t = TOTP(self.secret(64), digits=8, alg='sha512')
+        self.assertEqual('90693936', t.token(t.count(59)))
+        self.assertEqual('25091201', t.token(t.count(1111111109)))
+        self.assertEqual('99943326', t.token(t.count(1111111111)))
+        self.assertEqual('93441116', t.token(t.count(1234567890)))
+        self.assertEqual('38618901', t.token(t.count(2000000000)))
+        self.assertEqual('47863826', t.token(t.count(20000000000)))
+
     def test_match(self):
         t = TOTP(b'12345678901234567890')
         self.assertFalse(t.match('287082', ts=90))
