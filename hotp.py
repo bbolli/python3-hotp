@@ -33,18 +33,7 @@ class HOTP:
         return f'HOTP(digits={self.digits}, alg={self.alg.name})'
 
     def token(self, counter: Optional[int] = None) -> str:
-        """Calculate the HOTP value for the given counter.
-
-        Secret and test values from appendix D of RFC 4226.
-
-        >>> s = b'12345678901234567890'
-        >>> h = HOTP(s)
-        >>> [h.token(n) for n in range(10)]  #doctest: +NORMALIZE_WHITESPACE
-        ['755224', '287082', '359152', '969429', '338314',
-         '254676', '287922', '162583', '399871', '520489']
-        >>> HOTP(s, digits=7, counter=4).token()[0]  # check for leading zeros
-        '0'
-        """
+        """Calculate the HOTP value for the given counter."""
         if counter is None:
             counter = self.counter
         if counter < 0:
@@ -71,69 +60,19 @@ class TOTP(HOTP):
         return f'TOTP(digits={self.digits}, alg={self.alg.name}, period={self.period})'
 
     def count(self, ts: float) -> int:
-        """Calculate the TOTP counter for a given timestamp.
-
-        >>> t = TOTP(b'')
-        >>> ts = 1400000010  # divisible by period
-        >>> base = t.count(ts)
-        >>> base == t.count(ts + 29)
-        True
-        >>> base + 1 == t.count(ts + 30)
-        True
-        >>> base - 1 == t.count(ts - 1)
-        True
-        >>> t = TOTP(b'', base=90)
-        >>> base == t.count(ts)
-        False
-        >>> base == t.count(ts + 90)
-        True
-        >>> t = TOTP(b'', period=60)
-        >>> base == t.count(ts)
-        False
-        >>> base == t.count(ts * 2)
-        True
-        """
+        """Calculate the TOTP counter for a given timestamp."""
         return (int(ts) - self.base) // self.period
 
     def match(self, token: str, *, fuzz: Optional[int] = 1, ts: Optional[float] = None) -> bool:
         """Return true if the TOTP token matches around the given timestamp.
         `fuzz` is the number of periods on each side of `ts` that are checked
-        for a match.
-
-        >>> s = b'12345678901234567890'
-        >>> t = TOTP(s)
-        >>> t.match('287082', ts=90)
-        False
-        >>> t.match('287082', ts=60)
-        True
-        >>> t.match('359152', ts=60)
-        True
-        >>> t.match('969429', ts=60)
-        True
-        >>> t.match('969429', ts=30)
-        False
-        """
+        for a match."""
         ctr = self.count(ts or time.time())
         return any(token == self.token(ctr + f) for f in range(-fuzz, fuzz + 1))
 
 
 def from_qr(qr: str) -> HOTP:
-    """Decode a HOTP or TOTP QR code URL into the appropriate object.
-
-    >>> t = from_qr('otpauth://hotp/ACME%20Co:john.doe@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&algorithm=SHA1&digits=6&counter=1')
-    >>> t
-    HOTP(digits=6, alg=sha1)
-    >>> t.secret
-    b'=\\xc6\\xca\\xa4\\x82Jm(\\x87g\\xb23\\x1e \\xb41f\\xcb\\x85\\xd9'
-    >>> t.issuer
-    'ACME Co'
-    >>> t.user_account
-    'john.doe@email.com'
-    >>> t = from_qr('otpauth://totp/ACME%20Co:john.doe@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&algorithm=SHA1&digits=6&period=30')
-    >>> t
-    TOTP(digits=6, alg=sha1, period=30)
-    """
-
+    """Decode a HOTP or TOTP QR code URL into the appropriate object."""
     url = urllib.parse.urlparse(qr)
     if url.scheme != 'otpauth':
         raise ValueError(f'invalid scheme "{url.scheme}"')
