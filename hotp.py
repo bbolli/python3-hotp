@@ -7,9 +7,11 @@ import time
 import urllib.parse
 
 
-__all__ = ['HOTP', 'TOTP', 'from_qr', 'default_alg']
+__all__ = ['HOTP', 'TOTP', 'from_qr', 'default_alg', 'default_digits', 'default_period']
 
 default_alg = 'sha1'
+default_digits = 6
+default_period = 30
 
 
 class HOTP:
@@ -20,7 +22,7 @@ class HOTP:
     issuer: str
     user_account: str
 
-    def __init__(self, secret: bytes, digits: int = 6, alg: str = default_alg,
+    def __init__(self, secret: bytes, digits: int = default_digits, alg: str = default_alg,
                  counter: int = 0) -> None:
         self.secret = secret
         self.digits = digits
@@ -57,11 +59,11 @@ class HOTP:
         path = urllib.parse.quote(path)
         if self.alg != default_alg:
             params['algorithm'] = self.alg.upper()
-        if self.digits != 6:
+        if self.digits != default_digits:
             params['digits'] = self.digits
         if type(self) is HOTP:
             params['counter'] = self.counter
-        if type(self) is TOTP and self.period != 30:
+        if type(self) is TOTP and self.period != default_period:
             params['period'] = self.period
         query = urllib.parse.urlencode(params)
         return urllib.parse.urlunparse(('otpauth', netloc, path, None, query, None))
@@ -71,8 +73,8 @@ class TOTP(HOTP):
     period: int
     base: int
 
-    def __init__(self, secret: bytes, digits: int = 6, alg: str = default_alg,
-                 period: int = 30, base: int = 0) -> None:
+    def __init__(self, secret: bytes, digits: int = default_digits, alg: str = default_alg,
+                 period: int = default_period, base: int = 0) -> None:
         super().__init__(secret, digits, alg)
         self.period = period
         self.base = base
@@ -100,11 +102,11 @@ def from_qr(qr: str) -> HOTP:
     query = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
     secret = base64.b32decode(query['secret'])
     alg = query.get('algorithm', 'sha1')
-    digits = int(query.get('digits', 6))
+    digits = int(query.get('digits', default_digits))
     if url.netloc == 'hotp':
         hotp = HOTP(secret, digits, alg, int(query['counter']))
     elif url.netloc == 'totp':
-        hotp = TOTP(secret, digits, alg, int(query.get('period', 30)))
+        hotp = TOTP(secret, digits, alg, int(query.get('period', default_period)))
     else:
         raise ValueError(f'invalid protocol "{url.netloc}"')
     path = urllib.parse.unquote(url.path.lstrip('/')).split(':')
