@@ -4,7 +4,7 @@ import base64
 import hmac
 import struct
 import time
-from typing import Optional, Type
+from typing import Optional, Union
 import urllib.parse
 
 
@@ -18,15 +18,16 @@ class HOTP:
     alg: str
     digits: int
     counter: int
-    issuer: Optional[str]
-    user_account: Optional[str]
+    issuer: str
+    user_account: str
 
-    def __init__(self, secret: bytes, digits: int = 6, alg=default_alg, counter: int = 0):
+    def __init__(self, secret: bytes, digits: int = 6, alg: str = default_alg,
+                 counter: int = 0) -> None:
         self.secret = secret
         self.digits = digits
         self.alg = alg
         self.counter = counter
-        self.issuer = self.user_account = None
+        self.issuer = self.user_account = ''
 
     def __repr__(self) -> str:
         return f'HOTP(digits={self.digits}, alg={self.alg.lower()})'
@@ -37,17 +38,18 @@ class HOTP:
             counter = self.counter
         if counter < 0:
             raise ValueError("HOTP counter must be non-negative")
-        counter = struct.pack('>Q', counter)
-        digest = hmac.new(self.secret, counter, self.alg).digest()
+        counter_bin = struct.pack('>Q', counter)
+        digest = hmac.new(self.secret, counter_bin, self.alg).digest()
         offset = digest[-1] & 0x0F
-        result = digest[offset:offset + 4]
-        result = struct.unpack('>L', result)[0] & 0x7FFFFFFF
-        result %= 10 ** self.digits
-        return f'{result:0{self.digits}}'
+        p = digest[offset:offset + 4]
+        result = struct.unpack('>L', p)[0] & 0x7FFFFFFF
+        return f'{result % 10 ** self.digits:0{self.digits}}'
 
     def to_qr(self) -> str:
         netloc = self.__class__.__name__.lower()
-        params = {'secret': base64.b32encode(self.secret).rstrip(b'=')}
+        params: dict[str, Union[str, bytes, int]] = {
+            'secret': base64.b32encode(self.secret).rstrip(b'=')
+        }
         if self.issuer:
             path = f'{self.issuer}:{self.user_account}'
             params['issuer'] = self.issuer
@@ -58,9 +60,9 @@ class HOTP:
             params['algorithm'] = self.alg.upper()
         if self.digits != 6:
             params['digits'] = self.digits
-        if self.__class__ is HOTP:
+        if type(self) is HOTP:
             params['counter'] = self.counter
-        if self.__class__ is TOTP and self.period != 30:
+        if type(self) is TOTP and self.period != 30:
             params['period'] = self.period
         query = urllib.parse.urlencode(params)
         return urllib.parse.urlunparse(('otpauth', netloc, path, None, query, None))
@@ -70,7 +72,8 @@ class TOTP(HOTP):
     period: int
     base: int
 
-    def __init__(self, secret, digits=6, alg=default_alg, period=30, base=0):
+    def __init__(self, secret: bytes, digits: int = 6, alg: str = default_alg,
+                 period: int = 30, base: int = 0) -> None:
         super().__init__(secret, digits, alg)
         self.period = period
         self.base = base
@@ -82,7 +85,7 @@ class TOTP(HOTP):
         """Calculate the TOTP counter for a given timestamp."""
         return (int(ts) - self.base) // self.period
 
-    def match(self, token: str, *, fuzz: Optional[int] = 1, ts: Optional[float] = None) -> bool:
+    def match(self, token: str, *, fuzz: int = 1, ts: Optional[float] = None) -> bool:
         """Return true if the TOTP token matches around the given timestamp.
         `fuzz` is the number of periods on each side of `ts` that are checked
         for a match."""
@@ -95,9 +98,7 @@ def from_qr(qr: str) -> HOTP:
     url = urllib.parse.urlparse(qr)
     if url.scheme != 'otpauth':
         raise ValueError(f'invalid scheme "{url.scheme}"')
-    query = urllib.parse.parse_qs(url.query)
-    for k in query:
-        query[k] = query[k][0]
+    query = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
     secret = base64.b32decode(query['secret'])
     alg = query.get('algorithm', 'sha1')
     digits = int(query.get('digits', 6))
@@ -114,5 +115,5 @@ def from_qr(qr: str) -> HOTP:
     elif len(path) == 1 and path[0]:
         hotp.user_account = path[0].strip()
     else:
-        hotp.issuer = query.get('issuer')
+        hotp.issuer = query.get('issuer', '')
     return hotp

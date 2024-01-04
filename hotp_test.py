@@ -7,7 +7,7 @@ from hotp import HOTP, TOTP, from_qr
 
 class TestHOTP(unittest.TestCase):
 
-    def test_token(self):
+    def test_token(self) -> None:
         """Secret and test values from appendix D of RFC 4226."""
 
         secret = b'12345678901234567890'
@@ -29,7 +29,7 @@ class TestHOTP(unittest.TestCase):
 
 class TestTOTP(unittest.TestCase):
 
-    def test_count(self):
+    def test_count(self) -> None:
         t = TOTP(b'')
         ts = 1400000010  # divisible by period
         base = t.count(ts)
@@ -47,11 +47,11 @@ class TestTOTP(unittest.TestCase):
         self.assertEqual(base, t.count(ts * 2))
 
     @staticmethod
-    def secret(size: int):
+    def secret(size: int) -> bytes:
         mult = size // 10 + bool(size % 10)
         return (b'1234567890' * mult)[:size]
 
-    def test_token_sha1(self):
+    def test_token_sha1(self) -> None:
         """Secret and test values from appendix B of RFC 6238."""
         t = TOTP(self.secret(20), digits=8)
         self.assertEqual('94287082', t.token(t.count(59)))
@@ -61,7 +61,7 @@ class TestTOTP(unittest.TestCase):
         self.assertEqual('69279037', t.token(t.count(2000000000)))
         self.assertEqual('65353130', t.token(t.count(20000000000)))
 
-    def test_token_sha256(self):
+    def test_token_sha256(self) -> None:
         """Secret and test values from appendix B of RFC 6238."""
         t = TOTP(self.secret(32), digits=8, alg='sha256')
         self.assertEqual('46119246', t.token(t.count(59)))
@@ -71,7 +71,7 @@ class TestTOTP(unittest.TestCase):
         self.assertEqual('90698825', t.token(t.count(2000000000)))
         self.assertEqual('77737706', t.token(t.count(20000000000)))
 
-    def test_token_sha512(self):
+    def test_token_sha512(self) -> None:
         """Secret and test values from appendix B of RFC 6238."""
         t = TOTP(self.secret(64), digits=8, alg='sha512')
         self.assertEqual('90693936', t.token(t.count(59)))
@@ -81,7 +81,7 @@ class TestTOTP(unittest.TestCase):
         self.assertEqual('38618901', t.token(t.count(2000000000)))
         self.assertEqual('47863826', t.token(t.count(20000000000)))
 
-    def test_match(self):
+    def test_match(self) -> None:
         t = TOTP(b'12345678901234567890')
         self.assertFalse(t.match('287082', ts=90))
         self.assertTrue(t.match('287082', ts=60))
@@ -92,7 +92,7 @@ class TestTOTP(unittest.TestCase):
 
 class TestFromQR(unittest.TestCase):
 
-    def test_hotp_from_qr(self):
+    def test_hotp_from_qr(self) -> None:
         h = from_qr('otpauth://hotp/ACME%20Co:john.doe@email.com?'
                     'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&'
                     'algorithm=SHA1&digits=6&counter=1')
@@ -101,22 +101,22 @@ class TestFromQR(unittest.TestCase):
         self.assertEqual('ACME Co', h.issuer)
         self.assertEqual('john.doe@email.com', h.user_account)
 
-    def test_totp_from_qr(self):
+    def test_totp_from_qr(self) -> None:
         t = from_qr('otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%26Co')
         self.assertEqual('TOTP(digits=6, alg=sha1, period=30)', repr(t))
         self.assertEqual('ACME&Co', t.issuer)
-        self.assertEqual(None, t.user_account)
+        self.assertEqual('', t.user_account)
 
 
 class TestToQR(unittest.TestCase):
 
-    def test_hotp_from_qr(self):
+    def test_hotp_from_qr(self) -> None:
         url = ('otpauth://hotp/ACME%20Co%3Ajohn.doe%40email.com?'
                'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
                'algorithm=SHA256&counter=1')
         self.assertEqual(url, from_qr(url).to_qr())
 
-    def test_totp_from_qr(self):
+    def test_totp_from_qr(self) -> None:
         url = ('otpauth://totp/ACME%20Co%3Ajohn.doe%40email.com?'
                'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
                'algorithm=SHA512&period=60')
