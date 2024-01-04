@@ -4,7 +4,6 @@ import base64
 import hmac
 import struct
 import time
-from typing import Optional, Union
 import urllib.parse
 
 
@@ -32,7 +31,7 @@ class HOTP:
     def __repr__(self) -> str:
         return f'HOTP(digits={self.digits}, alg={self.alg.lower()})'
 
-    def token(self, counter: Optional[int] = None) -> str:
+    def token(self, counter: int | None = None) -> str:
         """Calculate the HOTP value for the given counter."""
         if counter is None:
             counter = self.counter
@@ -47,7 +46,7 @@ class HOTP:
 
     def to_qr(self) -> str:
         netloc = self.__class__.__name__.lower()
-        params: dict[str, Union[str, bytes, int]] = {
+        params: dict[str, str | bytes | int] = {
             'secret': base64.b32encode(self.secret).rstrip(b'=')
         }
         if self.issuer:
@@ -85,7 +84,7 @@ class TOTP(HOTP):
         """Calculate the TOTP counter for a given timestamp."""
         return (int(ts) - self.base) // self.period
 
-    def match(self, token: str, *, fuzz: int = 1, ts: Optional[float] = None) -> bool:
+    def match(self, token: str, *, fuzz: int = 1, ts: float | None = None) -> bool:
         """Return true if the TOTP token matches around the given timestamp.
         `fuzz` is the number of periods on each side of `ts` that are checked
         for a match."""
