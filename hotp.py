@@ -1,7 +1,6 @@
 """HOTP/TOTP one time password (RFC 4226/RFC 6238) implementation"""
 
 import base64
-import hashlib
 import hmac
 import struct
 import time
@@ -16,7 +15,7 @@ default_alg = 'sha1'
 
 class HOTP:
     secret: bytes
-    alg: 'Type[hashlib._Hash]'
+    alg: str
     digits: int
     counter: int
     issuer: Optional[str]
@@ -30,7 +29,7 @@ class HOTP:
         self.issuer = self.user_account = None
 
     def __repr__(self) -> str:
-        return f'HOTP(digits={self.digits}, alg={self.alg.name})'
+        return f'HOTP(digits={self.digits}, alg={self.alg.lower()})'
 
     def token(self, counter: Optional[int] = None) -> str:
         """Calculate the HOTP value for the given counter."""
@@ -55,8 +54,8 @@ class HOTP:
         else:
             path = self.user_account
         path = urllib.parse.quote(path)
-        if self.alg.name != default_alg:
-            params['algorithm'] = self.alg.name.upper()
+        if self.alg != default_alg:
+            params['algorithm'] = self.alg.upper()
         if self.digits != 6:
             params['digits'] = self.digits
         if self.__class__ is HOTP:
@@ -77,7 +76,7 @@ class TOTP(HOTP):
         self.base = base
 
     def __repr__(self) -> str:
-        return f'TOTP(digits={self.digits}, alg={self.alg.name}, period={self.period})'
+        return f'TOTP(digits={self.digits}, alg={self.alg.lower()}, period={self.period})'
 
     def count(self, ts: float) -> int:
         """Calculate the TOTP counter for a given timestamp."""
@@ -100,7 +99,7 @@ def from_qr(qr: str) -> HOTP:
     for k in query:
         query[k] = query[k][0]
     secret = base64.b32decode(query['secret'])
-    alg = hashlib.new(query.get('algorithm', 'sha1'))
+    alg = query.get('algorithm', 'sha1')
     digits = int(query.get('digits', 6))
     if url.netloc == 'hotp':
         hotp = HOTP(secret, digits, alg, int(query['counter']))
