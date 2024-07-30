@@ -2,7 +2,7 @@
 
 import unittest
 
-from hotp import HOTP, TOTP, from_url
+from hotp import HOTP, TOTP
 
 
 class TestHOTP(unittest.TestCase):
@@ -93,16 +93,16 @@ class TestTOTP(unittest.TestCase):
 class TestFromURL(unittest.TestCase):
 
     def test_hotp_from_url(self) -> None:
-        h = from_url('otpauth://hotp/ACME%20Co:john.doe@email.com?'
-                     'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&'
-                     'algorithm=SHA1&digits=6&counter=1')
+        h = HOTP.from_url('otpauth://hotp/ACME%20Co:john.doe@email.com?'
+                          'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&'
+                          'algorithm=SHA1&digits=6&counter=1')
         self.assertEqual('HOTP(digits=6, alg=sha1)', repr(h))
         self.assertEqual(b'=\xc6\xca\xa4\x82Jm(\x87g\xb23\x1e \xb41f\xcb\x85\xd9', h.secret)
         self.assertEqual('ACME Co', h.issuer)
         self.assertEqual('john.doe@email.com', h.user_account)
 
     def test_totp_from_url(self) -> None:
-        t = from_url('otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%26Co')
+        t = HOTP.from_url('otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%26Co')
         self.assertEqual('TOTP(digits=6, alg=sha1, period=30)', repr(t))
         self.assertEqual('ACME&Co', t.issuer)
         self.assertEqual('', t.user_account)
@@ -114,13 +114,13 @@ class TestToURL(unittest.TestCase):
         url = ('otpauth://hotp/ACME%20Co%3Ajohn.doe%40email.com?'
                'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
                'algorithm=SHA256&counter=1')
-        self.assertEqual(url, from_url(url).as_url())
+        self.assertEqual(url, HOTP.from_url(url).as_url())
 
     def test_totp_from_url(self) -> None:
         url = ('otpauth://totp/ACME%20Co%3Ajohn.doe%40email.com?'
                'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
                'algorithm=SHA512&period=60')
-        self.assertEqual(url, from_url(url).as_url())
+        self.assertEqual(url, HOTP.from_url(url).as_url())
 
 
 if __name__ == '__main__':

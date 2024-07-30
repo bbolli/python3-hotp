@@ -7,7 +7,7 @@ import time
 import urllib.parse
 
 
-__all__ = ['HOTP', 'TOTP', 'from_url', 'default_alg', 'default_digits', 'default_period']
+__all__ = ['HOTP', 'TOTP', 'default_alg', 'default_digits', 'default_period']
 
 default_alg = 'sha1'
 default_digits = 6
@@ -69,6 +69,32 @@ class HOTP:
         query = urllib.parse.urlencode(params)
         return urllib.parse.urlunparse(('otpauth', netloc, path, None, query, None))
 
+    @staticmethod
+    def from_url(url: str) -> 'HOTP':
+        """Decode a HOTP or TOTP URL into the appropriate object."""
+        url = urllib.parse.urlparse(url)
+        if url.scheme != 'otpauth':
+            raise ValueError(f'invalid scheme "{url.scheme}"')
+        query = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
+        secret = base64.b32decode(query['secret'])
+        alg = query.get('algorithm', 'sha1')
+        digits = int(query.get('digits', default_digits))
+        if url.netloc == 'hotp':
+            hotp = HOTP(secret, digits, alg, int(query['counter']))
+        elif url.netloc == 'totp':
+            hotp = TOTP(secret, digits, alg, int(query.get('period', default_period)))
+        else:
+            raise ValueError(f'invalid protocol "{url.netloc}"')
+        path = urllib.parse.unquote(url.path.lstrip('/')).split(':')
+        if len(path) == 2:
+            hotp.issuer = path[0]
+            hotp.user_account = path[1].strip()
+        elif len(path) == 1 and path[0]:
+            hotp.user_account = path[0].strip()
+        else:
+            hotp.issuer = query.get('issuer', '')
+        return hotp
+
 
 class TOTP(HOTP):
     period: int
@@ -93,29 +119,3 @@ class TOTP(HOTP):
         for a match."""
         ctr = self.count(ts or time.time())
         return any(token == self.token(ctr + f) for f in range(-fuzz, fuzz + 1))
-
-
-def from_url(url_: str) -> HOTP:
-    """Decode a HOTP or TOTP URL into the appropriate object."""
-    url = urllib.parse.urlparse(url_)
-    if url.scheme != 'otpauth':
-        raise ValueError(f'invalid scheme "{url.scheme}"')
-    query = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
-    secret = base64.b32decode(query['secret'])
-    alg = query.get('algorithm', 'sha1')
-    digits = int(query.get('digits', default_digits))
-    if url.netloc == 'hotp':
-        hotp = HOTP(secret, digits, alg, int(query['counter']))
-    elif url.netloc == 'totp':
-        hotp = TOTP(secret, digits, alg, int(query.get('period', default_period)))
-    else:
-        raise ValueError(f'invalid protocol "{url.netloc}"')
-    path = urllib.parse.unquote(url.path.lstrip('/')).split(':')
-    if len(path) == 2:
-        hotp.issuer = path[0]
-        hotp.user_account = path[1].strip()
-    elif len(path) == 1 and path[0]:
-        hotp.user_account = path[0].strip()
-    else:
-        hotp.issuer = query.get('issuer', '')
-    return hotp
