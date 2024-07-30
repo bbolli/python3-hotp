@@ -2,7 +2,7 @@
 
 import unittest
 
-from hotp import HOTP, TOTP, from_qr
+from hotp import HOTP, TOTP, from_url
 
 
 class TestHOTP(unittest.TestCase):
@@ -90,37 +90,37 @@ class TestTOTP(unittest.TestCase):
         self.assertFalse(t.match('969429', ts=30))
 
 
-class TestFromQR(unittest.TestCase):
+class TestFromURL(unittest.TestCase):
 
-    def test_hotp_from_qr(self) -> None:
-        h = from_qr('otpauth://hotp/ACME%20Co:john.doe@email.com?'
-                    'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&'
-                    'algorithm=SHA1&digits=6&counter=1')
+    def test_hotp_from_url(self) -> None:
+        h = from_url('otpauth://hotp/ACME%20Co:john.doe@email.com?'
+                     'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&'
+                     'algorithm=SHA1&digits=6&counter=1')
         self.assertEqual('HOTP(digits=6, alg=sha1)', repr(h))
         self.assertEqual(b'=\xc6\xca\xa4\x82Jm(\x87g\xb23\x1e \xb41f\xcb\x85\xd9', h.secret)
         self.assertEqual('ACME Co', h.issuer)
         self.assertEqual('john.doe@email.com', h.user_account)
 
-    def test_totp_from_qr(self) -> None:
-        t = from_qr('otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%26Co')
+    def test_totp_from_url(self) -> None:
+        t = from_url('otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%26Co')
         self.assertEqual('TOTP(digits=6, alg=sha1, period=30)', repr(t))
         self.assertEqual('ACME&Co', t.issuer)
         self.assertEqual('', t.user_account)
 
 
-class TestToQR(unittest.TestCase):
+class TestToURL(unittest.TestCase):
 
-    def test_hotp_from_qr(self) -> None:
+    def test_hotp_from_url(self) -> None:
         url = ('otpauth://hotp/ACME%20Co%3Ajohn.doe%40email.com?'
                'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
                'algorithm=SHA256&counter=1')
-        self.assertEqual(url, from_qr(url).to_qr())
+        self.assertEqual(url, from_url(url).as_url())
 
-    def test_totp_from_qr(self) -> None:
+    def test_totp_from_url(self) -> None:
         url = ('otpauth://totp/ACME%20Co%3Ajohn.doe%40email.com?'
                'secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME+Co&'
                'algorithm=SHA512&period=60')
-        self.assertEqual(url, from_qr(url).to_qr())
+        self.assertEqual(url, from_url(url).as_url())
 
 
 if __name__ == '__main__':

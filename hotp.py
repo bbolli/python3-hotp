@@ -7,7 +7,7 @@ import time
 import urllib.parse
 
 
-__all__ = ['HOTP', 'TOTP', 'from_qr', 'default_alg', 'default_digits', 'default_period']
+__all__ = ['HOTP', 'TOTP', 'from_url', 'default_alg', 'default_digits', 'default_period']
 
 default_alg = 'sha1'
 default_digits = 6
@@ -46,7 +46,8 @@ class HOTP:
         result = struct.unpack('>L', p)[0] & 0x7FFFFFFF
         return f'{result % 10 ** self.digits:0{self.digits}}'
 
-    def to_qr(self) -> str:
+    def as_url(self) -> str:
+        """Return the URL of this instance."""
         netloc = self.__class__.__name__.lower()
         params: dict[str, str | bytes | int] = {
             'secret': base64.b32encode(self.secret).rstrip(b'=')
@@ -94,9 +95,9 @@ class TOTP(HOTP):
         return any(token == self.token(ctr + f) for f in range(-fuzz, fuzz + 1))
 
 
-def from_qr(qr: str) -> HOTP:
-    """Decode a HOTP or TOTP QR code URL into the appropriate object."""
-    url = urllib.parse.urlparse(qr)
+def from_url(url_: str) -> HOTP:
+    """Decode a HOTP or TOTP URL into the appropriate object."""
+    url = urllib.parse.urlparse(url_)
     if url.scheme != 'otpauth':
         raise ValueError(f'invalid scheme "{url.scheme}"')
     query = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
